@@ -6,12 +6,10 @@
   <title>Barcode Label Generator</title>
   <!-- JsBarcode CDN untuk merender barcode -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <!-- html2pdf CDN agar bisa simpan PDF langsung di Telegram -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Telegram Web App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand(); // Agar tampil layar penuh
-</script>
-
   <style>
     * {
       box-sizing: border-box;
@@ -257,30 +255,17 @@
     .modal-actions button:hover {
       opacity: 0.7;
     }
-
-    @media print {
-      body {
-        background-color: #fff;
-        padding: 0;
-      }
-      .top-bar, .modal-overlay {
-        display: none !important;
-      }
-      .grid-container {
-        border: none;
-        max-width: 100%;
-      }
-      .label-box {
-        border: 1px solid #ddd;
-        break-inside: avoid;
-      }
-      .empty-icon {
-        display: none;
-      }
-    }
   </style>
 </head>
 <body>
+
+  <script>
+    // Inisialisasi Telegram Web App
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+  </script>
 
   <div class="top-bar">
     <h2>Generator Label Barcode</h2>
@@ -288,7 +273,7 @@
       <button class="btn-action btn-json" onclick="saveJsonFile()">
         💾 Simpan JSON
       </button>
-      <button class="btn-action btn-pdf" onclick="window.print()">
+      <button class="btn-action btn-pdf" onclick="savePdfFile()">
         📄 Simpan PDF
       </button>
     </div>
@@ -519,7 +504,6 @@
     });
 
     function saveJsonFile() {
-      // Ambil data unik atau semua item yang terisi, buang yang null
       const filledItems = cellData.filter(item => item !== null);
 
       if (filledItems.length === 0) {
@@ -527,14 +511,12 @@
         return;
       }
 
-      // Format struktur JSON sesuai permintaan (hanya barcode, name, price)
       const exportData = filledItems.map(item => ({
         barcode: item.code,
         name: item.name,
         price: item.price
       }));
 
-      // Buat file blob JSON dan download otomatis
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
@@ -542,6 +524,19 @@
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
+    }
+
+    function savePdfFile() {
+      const element = document.getElementById('gridContainer');
+      const opt = {
+        margin:       5,
+        filename:     'label-barcode.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(element).set(opt).save();
     }
   </script>
 </body>
