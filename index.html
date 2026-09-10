@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcode Label Generator</title>
+  <!-- JsBarcode CDN untuk merender barcode -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand(); // Agar tampil layar penuh
+</script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background-color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .top-bar {
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #333;
+      padding: 12px 20px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .top-bar h2 {
+      color: #fff;
+      font-size: 16px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-action {
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .btn-pdf {
+      background-color: #4CAF50;
+    }
+
+    .btn-json {
+      background-color: #2196F3;
+    }
+
+    .btn-action:hover {
+      opacity: 0.85;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background-color: #ccc;
+      border: 1px solid #ccc;
+      width: 100%;
+      max-width: 800px;
+      background-color: #fff;
+    }
+
+    .label-box {
+      background-color: #fff;
+      border: 1px solid #e0e0e0;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      padding: 5px;
+      text-align: center;
+      transition: background-color 0.2s;
+    }
+
+    .label-box:hover {
+      background-color: #f9f9f9;
+    }
+
+    .empty-icon {
+      color: #ddd;
+      font-size: 18px;
+    }
+
+    .label-content {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .label-title {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 2px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .barcode-svg {
+      max-width: 100%;
+      height: 60px;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-card {
+      background: #fff;
+      width: 90%;
+      max-width: 400px;
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-card h3 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: inline-block;
+      font-size: 14px;
+      color: #333;
+      width: 60px;
+    }
+
+    .form-group input, .form-group select {
+      border: none;
+      border-bottom: 2px solid #333;
+      outline: none;
+      padding: 4px 2px;
+      font-size: 14px;
+      width: calc(100% - 70px);
+    }
+
+    .preview-barcode-container {
+      text-align: center;
+      margin: 10px 0;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-barcode-container svg {
+      max-width: 100%;
+      height: 60px;
+    }
+
+    .code-type-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .code-type-row select {
+      width: 120px;
+      border-bottom: 1px solid #aaa;
+    }
+
+    .code-type-row input {
+      flex: 1;
+      width: auto;
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+      margin-left: 70px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .checkbox-group input {
+      width: auto;
+      cursor: pointer;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .modal-actions button {
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #333;
+      padding: 5px 10px;
+    }
+
+    .modal-actions button:hover {
+      opacity: 0.7;
+    }
+
+    @media print {
+      body {
+        background-color: #fff;
+        padding: 0;
+      }
+      .top-bar, .modal-overlay {
+        display: none !important;
+      }
+      .grid-container {
+        border: none;
+        max-width: 100%;
+      }
+      .label-box {
+        border: 1px solid #ddd;
+        break-inside: avoid;
+      }
+      .empty-icon {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <h2>Generator Label Barcode</h2>
+    <div class="top-actions">
+      <button class="btn-action btn-json" onclick="saveJsonFile()">
+        💾 Simpan JSON
+      </button>
+      <button class="btn-action btn-pdf" onclick="window.print()">
+        📄 Simpan PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="grid-container" id="gridContainer"></div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-card">
+      <h3>Label</h3>
+      
+      <div class="form-group">
+        <label for="inputName">Name:</label>
+        <input type="text" id="inputName" placeholder="Contoh: Gorden Minimalis Polos">
+      </div>
+
+      <div class="form-group">
+        <label for="inputPrice">Price:</label>
+        <input type="number" id="inputPrice" placeholder="Contoh: 125000">
+      </div>
+
+      <div class="preview-barcode-container">
+        <svg id="previewBarcode"></svg>
+      </div>
+
+      <div class="form-group code-type-row" style="margin-bottom: 2px;">
+        <select id="selectFormat">
+          <option value="CODE128">CODE128</option>
+          <option value="EAN13">EAN13</option>
+          <option value="EAN8">EAN8</option>
+          <option value="UPCA">UPCA</option>
+          <option value="CODE39">CODE39</option>
+          <option value="ITF14">ITF14</option>
+          <option value="Codabar">Codabar</option>
+        </select>
+        <input type="text" id="inputCode" placeholder="Masukkan kode barcode">
+      </div>
+      <div class="helper-text" id="formatHelper">Contoh: 8991001234567 (Bebas angka/huruf)</div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="applyToAll">
+        <label for="applyToAll" style="width: auto;">Terapkan ke semua kotak</label>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnCancel">CANCEL</button>
+        <button id="btnOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_CELLS = 40;
+    let selectedCellIndex = null;
+
+    const gridContainer = document.getElementById('gridContainer');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const inputName = document.getElementById('inputName');
+    const inputPrice = document.getElementById('inputPrice');
+    const inputCode = document.getElementById('inputCode');
+    const selectFormat = document.getElementById('selectFormat');
+    const formatHelper = document.getElementById('formatHelper');
+    const previewBarcode = document.getElementById('previewBarcode');
+    const applyToAll = document.getElementById('applyToAll');
+    const btnCancel = document.getElementById('btnCancel');
+    const btnOk = document.getElementById('btnOk');
+
+    const cellData = Array(TOTAL_CELLS).fill(null);
+
+    const formatRules = {
+      CODE128: "Contoh: 8991001234567 (Bebas: angka, huruf, dan simbol)",
+      EAN13:   "Contoh: 8990123456781 (Wajib angka, tepat 13 digit)",
+      EAN8:    "Contoh: 12345670 (Wajib angka, tepat 8 digit)",
+      UPCA:    "Contoh: 036000291452 (Wajib angka, tepat 12 digit)",
+      CODE39:  "Contoh: PRODUK-01 (Huruf kapital, angka, dan tanda -)",
+      ITF14:   "Contoh: 10012345678905 (Wajib angka, tepat 14 digit)",
+      Codabar: "Contoh: A12345B (Angka & simbol -, $, `:`, `/`, `.`, `+`)"
+    };
+
+    for (let i = 0; i < TOTAL_CELLS; i++) {
+      const box = document.createElement('div');
+      box.className = 'label-box';
+      box.dataset.index = i;
+
+      box.innerHTML = `
+        <span class="empty-icon" id="icon-${i}">✕</span>
+        <div class="label-content" id="content-${i}">
+          <div class="label-title" id="title-${i}"></div>
+          <svg class="barcode-svg" id="barcode-${i}"></svg>
+        </div>
+      `;
+
+      box.addEventListener('click', () => openModal(i));
+      gridContainer.appendChild(box);
+    }
+
+    function openModal(index) {
+      selectedCellIndex = index;
+      const data = cellData[index];
+
+      if (data) {
+        inputName.value = data.name;
+        inputPrice.value = data.price !== undefined ? data.price : '';
+        inputCode.value = data.code;
+        selectFormat.value = data.format;
+      } else {
+        inputName.value = '';
+        inputPrice.value = '';
+        inputCode.value = '';
+        selectFormat.value = 'CODE128';
+        previewBarcode.innerHTML = '';
+      }
+
+      applyToAll.checked = false;
+      updateHelperText();
+      if (inputCode.value) {
+        updatePreviewBarcode();
+      }
+      modalOverlay.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modalOverlay.style.display = 'none';
+      selectedCellIndex = null;
+    }
+
+    function updateHelperText() {
+      const format = selectFormat.value;
+      formatHelper.innerText = formatRules[format] || "";
+    }
+
+    function updatePreviewBarcode() {
+      const code = inputCode.value.trim();
+      const format = selectFormat.value;
+
+      if (!code) {
+        previewBarcode.innerHTML = '';
+        return;
+      }
+
+      try {
+        JsBarcode("#previewBarcode", code, {
+          format: format,
+          lineColor: "#000",
+          width: 2,
+          height: 50,
+          displayValue: true,
+          fontSize: 14
+        });
+      } catch (e) {
+        previewBarcode.innerHTML = '';
+      }
+    }
+
+    selectFormat.addEventListener('change', () => {
+      updateHelperText();
+      updatePreviewBarcode();
+    });
+
+    inputCode.addEventListener('input', updatePreviewBarcode);
+
+    function renderCell(index, name, code, format, price) {
+      cellData[index] = { name, code, format, price };
+
+      const icon = document.getElementById(`icon-${index}`);
+      const content = document.getElementById(`content-${index}`);
+      const title = document.getElementById(`title-${index}`);
+
+      icon.style.display = 'none';
+      content.style.display = 'flex';
+      title.innerText = name;
+
+      try {
+        JsBarcode(`#barcode-${index}`, code, {
+          format: format,
+          lineColor: "#000",
+          width: 1.5,
+          height: 35,
+          displayValue: true,
+          fontSize: 10,
+          margin: 0
+        });
+      } catch (e) {
+        console.error("Format error on index:", index);
+      }
+    }
+
+    btnOk.addEventListener('click', () => {
+      if (selectedCellIndex === null) return;
+
+      const name = inputName.value.trim();
+      const price = inputPrice.value ? Number(inputPrice.value) : 0;
+      const code = inputCode.value.trim();
+      const format = selectFormat.value;
+
+      if (!name) {
+        alert("Nama label tidak boleh kosong!");
+        return;
+      }
+
+      if (!code) {
+        alert("Kode barcode tidak boleh kosong!");
+        return;
+      }
+
+      try {
+        JsBarcode(document.createElement('canvas'), code, { format: format });
+      } catch (e) {
+        alert("Format atau jumlah digit kode tidak sesuai dengan aturan " + format + "!");
+        return;
+      }
+
+      if (applyToAll.checked) {
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+          renderCell(i, name, code, format, price);
+        }
+      } else {
+        renderCell(selectedCellIndex, name, code, format, price);
+      }
+
+      closeModal();
+    });
+
+    btnCancel.addEventListener('click', closeModal);
+
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    function saveJsonFile() {
+      // Ambil data unik atau semua item yang terisi, buang yang null
+      const filledItems = cellData.filter(item => item !== null);
+
+      if (filledItems.length === 0) {
+        alert("Belum ada data label yang diisi!");
+        return;
+      }
+
+      // Format struktur JSON sesuai permintaan (hanya barcode, name, price)
+      const exportData = filledItems.map(item => ({
+        barcode: item.code,
+        name: item.name,
+        price: item.price
+      }));
+
+      // Buat file blob JSON dan download otomatis
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "items.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  </script>
+</body>
+</html>
